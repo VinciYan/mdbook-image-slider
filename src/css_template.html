@@ -1,0 +1,113 @@
+<style>
+.image-viewer {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+}
+.viewer-container {
+    width: 100%;
+    height: 450px;
+    overflow: hidden;
+}
+.viewer-slide {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.viewer-image {
+    width: 100%;
+    height: 400px;
+    object-fit: contain;
+    cursor: pointer;
+}
+.viewer-caption {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+}
+.image-counter {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+}
+.viewer-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 18px;
+    border-radius: 5px;
+    transition: background 0.3s, opacity 0.3s;
+    opacity: 0;
+    z-index: 10;
+}
+.image-viewer:hover .viewer-btn {
+    opacity: 1;
+}
+.viewer-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+.prev-btn {
+    left: 10px;
+}
+.next-btn {
+    right: 10px;
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.9);
+}
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    cursor: move;
+    transition: transform 0.1s ease-out;
+    touch-action: none;
+}
+.close {
+    position: fixed;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    z-index: 1001;
+}
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+@media (max-width: 768px) {
+    .viewer-btn {
+        display: block;
+        opacity: 1;
+    }
+}
+</style>

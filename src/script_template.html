@@ -1,0 +1,191 @@
+<script>
+let isDragging = false;
+let startX, startY, translateX = 0, translateY = 0, scale = 1;
+let lastTouchDistance = 0;
+let modalImg;
+let doubleTapTimer = null;
+let lastTap = 0;        
+function startDrag(e) {
+    isDragging = true;
+    startX = e.type.includes('mouse') ? e.clientX - translateX : e.touches[0].clientX - translateX;
+    startY = e.type.includes('mouse') ? e.clientY - translateY : e.touches[0].clientY - translateY;
+    if (modalImg) modalImg.style.cursor = 'grabbing';
+}        
+function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    translateX = clientX - startX;
+    translateY = clientY - startY;
+    updateImageTransform();
+}        
+function endDrag() {
+    isDragging = false;
+    if (modalImg) modalImg.style.cursor = 'move';
+}        
+function startTouch(e) {
+    if (e.touches.length === 2) {
+        lastTouchDistance = getTouchDistance(e.touches);
+    } else if (e.touches.length === 1) {
+        startDrag(e);
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        clearTimeout(doubleTapTimer);
+        if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
+            resetZoom();
+        } else {
+            doubleTapTimer = setTimeout(() => {
+                clearTimeout(doubleTapTimer);
+            }, 300);
+        }
+        lastTap = currentTime;
+    }
+}        
+function moveTouch(e) {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+        const touchDistance = getTouchDistance(e.touches);
+        const scaleDiff = touchDistance / lastTouchDistance;
+        scale *= scaleDiff;
+        scale = Math.min(Math.max(scale, 0.1), 10);
+        lastTouchDistance = touchDistance;                
+        // Update center point for pinch-zoom
+        const touchCenter = getTouchCenter(e.touches);
+        translateX += touchCenter.x - (translateX + touchCenter.x) * scaleDiff;
+        translateY += touchCenter.y - (translateY + touchCenter.y) * scaleDiff;                
+        updateImageTransform();
+    } else if (e.touches.length === 1) {
+        drag(e);
+    }
+}        
+function endTouch(e) {
+    if (e.touches.length === 0) {
+        endDrag();
+    } else if (e.touches.length === 1) {
+        startDrag(e);
+    }
+}        
+function getTouchDistance(touches) {
+    return Math.hypot(
+        touches[0].pageX - touches[1].pageX,
+        touches[0].pageY - touches[1].pageY
+    );
+}        
+function getTouchCenter(touches) {
+    return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2
+    };
+}        
+function zoom(e) {
+    e.preventDefault();
+    if (!modalImg) return;
+    const rect = modalImg.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const zoomIntensity = 0.1;
+    const wheel = e.deltaY < 0 ? 1 : -1;
+    const zoom = Math.exp(wheel * zoomIntensity);
+    const newScale = scale * zoom;
+    if (newScale > 0.1 && newScale < 10) {
+        const scaleChange = newScale - scale;
+        translateX -= (mouseX - rect.width / 2) * scaleChange;
+        translateY -= (mouseY - rect.height / 2) * scaleChange;
+        scale = newScale;
+        updateImageTransform();
+    }
+}        
+function resetZoom() {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateImageTransform();
+}        
+function updateImageTransform() {
+    if (modalImg) {
+        modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+}        
+document.addEventListener('DOMContentLoaded', function() {
+    const viewers = document.querySelectorAll('.image-viewer');
+    viewers.forEach(viewer => {
+        const slides = viewer.querySelectorAll('.viewer-slide');
+        const prevBtn = viewer.querySelector('.prev-btn');
+        const nextBtn = viewer.querySelector('.next-btn');
+        const counter = viewer.querySelector('.image-counter');
+        let currentIndex = 0;                
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.style.display = i === index ? 'block' : 'none';
+            });
+            counter.textContent = `${index + 1}/${slides.length}`;
+        }                
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+            showSlide(currentIndex);
+        });                
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentIndex = (currentIndex + 1) % slides.length;
+            showSlide(currentIndex);
+        });                
+        showSlide(currentIndex);                
+        viewer.addEventListener('mouseenter', () => {
+            prevBtn.style.display = 'block';
+            nextBtn.style.display = 'block';
+        });                
+        viewer.addEventListener('mouseleave', () => {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        });                
+        const images = viewer.querySelectorAll('.viewer-image');
+        images.forEach(img => {
+            img.addEventListener('click', () => openModal(img.src));
+        });
+    });
+});        
+function openModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    modalImg = document.getElementById('modalImage');
+    const modalContent = document.querySelector('.modal-content');
+    modal.style.display = 'block';
+    modalImg.src = imageSrc;            
+    resetZoom();            
+    modalImg.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+    modalImg.addEventListener('dragstart', (e) => e.preventDefault());            
+    modalImg.addEventListener('touchstart', startTouch);
+    modalImg.addEventListener('touchmove', moveTouch);
+    modalImg.addEventListener('touchend', endTouch);
+    modalContent.addEventListener('wheel', zoom);            
+    modalImg.addEventListener('dblclick', resetZoom);
+}        
+function closeModal() {
+    const modal = document.getElementById('imageModal');
+    modal.style.display = 'none';
+    if (modalImg) {
+        modalImg.style.transform = 'translate(0, 0) scale(1)';                
+        modalImg.removeEventListener('mousedown', startDrag);
+        modalImg.removeEventListener('touchstart', startTouch);
+        modalImg.removeEventListener('touchmove', moveTouch);
+        modalImg.removeEventListener('touchend', endTouch);
+        modalImg.removeEventListener('dblclick', resetZoom);
+    }
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('mouseup', endDrag);
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.removeEventListener('wheel', zoom);
+    }
+}        
+window.onclick = function(event) {
+    const modal = document.getElementById('imageModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+</script>
